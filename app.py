@@ -138,6 +138,8 @@ def gerar_pdf(dados: dict, secao: str = "completo") -> bytes:
                     qtd,
                     dados.get(f"{prefixo}{i}_texto", "") or "—",
                 ])
+        for i in range(1, dados.get("qtd_avulsos", 0) + 1):
+            tabela_recitativos.append([f"Avulso {i}", "", dados.get(f"avulso_{i}_texto", "") or "—"])
         tabela_recitativos.append(["Total", total_recitativos, ""])
         t = Table(tabela_recitativos, colWidths=[4.5 * cm, 1.5 * cm, 7 * cm])
         t.setStyle(TableStyle([
@@ -266,6 +268,25 @@ with aba_culto:
 
     st.caption(f"Total de recitativos: {irmas1 + irmas2 + irmas3 + irmaos1 + irmaos2 + irmaos3}")
 
+    st.markdown("**Recitativos Avulsos**")
+    avulsos_ativo = st.checkbox("Adicionar recitativos avulsos", value=dados_salvos.get("avulsos_ativo", False))
+    avulsos_textos = []
+    if avulsos_ativo:
+        qtd_avulsos = st.number_input(
+            "Quantidade de recitativos avulsos", min_value=0,
+            value=dados_salvos.get("qtd_avulsos", 1), key="qtd_avulsos",
+        )
+        for i in range(1, int(qtd_avulsos) + 1):
+            texto = st.text_input(
+                f"Recitativo avulso {i}",
+                value=dados_salvos.get(f"avulso_{i}_texto", ""),
+                key=f"avulso_{i}_texto",
+                placeholder="Ex: Provérbios cap. 10",
+            )
+            avulsos_textos.append(texto)
+    else:
+        qtd_avulsos = 0
+
     st.divider()
     culto_actions = st.empty()
 
@@ -331,6 +352,8 @@ dados = {
     "irmas1_texto": irmas1_texto, "irmas2_texto": irmas2_texto, "irmas3_texto": irmas3_texto,
     "irmaos1": irmaos1, "irmaos2": irmaos2, "irmaos3": irmaos3,
     "irmaos1_texto": irmaos1_texto, "irmaos2_texto": irmaos2_texto, "irmaos3_texto": irmaos3_texto,
+    "avulsos_ativo": avulsos_ativo, "qtd_avulsos": int(qtd_avulsos),
+    **{f"avulso_{i}_texto": t for i, t in enumerate(avulsos_textos, start=1)},
     "ens_organistas": ens_organistas, "ens_irmas": ens_irmas, "ens_irmaos": ens_irmaos,
     "pct_musicos": pct_musicos, "pct_organistas": pct_organistas,
     **{f"i_{nome}": v for nome, v in instrumento_valores.items()},
