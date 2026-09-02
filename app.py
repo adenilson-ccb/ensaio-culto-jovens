@@ -1,74 +1,11 @@
-import hashlib
-import io
 import json
-from datetime import datetime
 
 import streamlit as st
-import libsql_client
 
-# Corrige incompatibilidade do reportlab com hashlib.md5 em alguns Windows/Python
-_md5_original = hashlib.md5
-try:
-    _md5_original(usedforsecurity=False)
-except TypeError:
-    def _md5_compativel(*args, **kwargs):
-        kwargs.pop("usedforsecurity", None)
-        return _md5_original(*args, **kwargs)
-    hashlib.md5 = _md5_compativel
-
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from database import salvar_ensaio, listar_ensaios, excluir_ensaio
+from pdf import gerar_pdf
 
 st.set_page_config(page_title="Culto de Jovens — Ensaio Local", page_icon="🎵", layout="centered")
-
-# ---------------------------------------------------------------------------
-# Conexão com o Turso
-# ---------------------------------------------------------------------------
-
-@st.cache_resource
-def get_client():
-    client = libsql_client.create_client_sync(
-        url=st.secrets["TURSO_DATABASE_URL"],
-        auth_token=st.secrets["TURSO_AUTH_TOKEN"],
-    )
-    client.execute(
-        """
-        CREATE TABLE IF NOT EXISTS ensaios (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            criado_em TEXT NOT NULL,
-            titulo TEXT NOT NULL,
-            dados TEXT NOT NULL,
-            total_geral INTEGER NOT NULL
-        )
-        """
-    )
-    return client
-
-
-def salvar_ensaio(titulo: str, dados: dict, total_geral: int):
-    client = get_client()
-    client.execute(
-        "INSERT INTO ensaios (criado_em, titulo, dados, total_geral) VALUES (?, ?, ?, ?)",
-        [datetime.now().isoformat(timespec="seconds"), titulo, json.dumps(dados), total_geral],
-    )
-
-
-def listar_ensaios(limite: int = 15):
-    client = get_client()
-    rs = client.execute(
-        "SELECT id, criado_em, titulo, dados, total_geral FROM ensaios ORDER BY id DESC LIMIT ?",
-        [limite],
-    )
-    return rs.rows
-
-
-def excluir_ensaio(id_: int):
-    client = get_client()
-    client.execute("DELETE FROM ensaios WHERE id = ?", [id_])
-
 
 # ---------------------------------------------------------------------------
 # Login por senha única
@@ -96,98 +33,6 @@ if not st.session_state.autenticado:
     st.stop()
 
 # ---------------------------------------------------------------------------
-# Geração do PDF
-# ---------------------------------------------------------------------------
-
-def gerar_pdf(dados: dict, secao: str = "completo") -> bytes:
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=1.5 * cm, bottomMargin=1.5 * cm)
-    styles = getSampleStyleSheet()
-    elements = []
-
-    elements.append(Paragraph(dados["titulo"], styles["Title"]))
-    elements.append(Spacer(1, 10))
-
-    if secao in ("completo", "culto"):
-        elements.append(Paragraph("Culto de Jovens", styles["Heading2"]))
-        elements.append(Paragraph("Cadastro geral", styles["Heading3"]))
-        total_cadastro = dados["mus_rjm"] + dados["org_rjm"] + dados["mus_casados"] + dados["org_casadas"]
-        tabela_cadastro = [
-            ["Músicos RJM", dados["mus_rjm"], "Organistas RJM", dados["org_rjm"]],
-            ["Músicos Casados", dados["mus_casados"], "Organistas Casadas", dados["org_casadas"]],
-            ["Total", "", "", total_cadastro],
-        ]
-        t = Table(tabela_cadastro, colWidths=[4.5 * cm, 2 * cm, 4.5 * cm, 2 * cm])
-        t.setStyle(TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-        ]))
-        elements.append(t)
-        elements.append(Spacer(1, 10))
-
-        elements.append(Paragraph("Recitativos", styles["Heading3"]))
-        total_recitativos = 0
-        tabela_recitativos = [["Fileira", "Qtd.", "Recitativo"]]
-        for label, prefixo in [("Irmãs", "irmas"), ("Irmãos", "irmaos")]:
-            for i in (1, 2, 3):
-                qtd = dados.get(f"{prefixo}{i}", 0)
-                total_recitativos += qtd
-                tabela_recitativos.append([
-                    f"{label} — {i}ª Fileira",
-                    qtd,
-                    dados.get(f"{prefixo}{i}_texto", "") or "—",
-                ])
-        if dados.get("avulsos_ativo") and dados.get("qtd_avulsos", 0) > 0:
-            tabela_recitativos.append(["Recitativos Avulsos", dados.get("qtd_avulsos", 0), ""])
-        tabela_recitativos.append(["Total", total_recitativos, ""])
-        t = Table(tabela_recitativos, colWidths=[4.5 * cm, 1.5 * cm, 7 * cm])
-        t.setStyle(TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-        ]))
-        elements.append(t)
-        elements.append(Spacer(1, 16))
-
-    if secao in ("completo", "ensaio"):
-        elements.append(Paragraph("Ensaio", styles["Heading2"]))
-        elements.append(Paragraph("Instrumentistas", styles["Heading3"]))
-        tabela_instrumentos = [["Categoria", "Cadastrados", "Prévia estimada"]]
-        for cat in ["Cordas", "Madeiras", "Metais"]:
-            tabela_instrumentos.append([cat, dados["totais_categoria"][cat], dados["previa"][cat]])
-        t = Table(tabela_instrumentos, colWidths=[4.5 * cm, 4.5 * cm, 4.5 * cm])
-        t.setStyle(TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ]))
-        elements.append(t)
-        elements.append(Spacer(1, 10))
-
-        elements.append(Paragraph("Prévia geral", styles["Heading3"]))
-        tabela_previa = [
-            ["Total de músicos (estimado)", dados["previa_musicos"]],
-            ["Total de organistas (estimado)", dados["previa_organistas"]],
-            ["Irmãs no ensaio", dados["ens_irmas"]],
-            ["Irmãos no ensaio", dados["ens_irmaos"]],
-            ["Total geral do ensaio", dados["total_geral"]],
-        ]
-        t = Table(tabela_previa, colWidths=[9 * cm, 4 * cm])
-        t.setStyle(TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ("FONTSIZE", (0, 0), (-1, -1), 9),
-            ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-        ]))
-        elements.append(t)
-
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer.getvalue()
-
-
-# ---------------------------------------------------------------------------
 # App principal
 # ---------------------------------------------------------------------------
 
@@ -195,6 +40,12 @@ INSTRUMENTOS = {
     "Cordas": ["Violino", "Viola", "Violoncelo"],
     "Madeiras": ["Flauta", "Clarinete", "Clarone", "Sax Soprano", "Sax Alto", "Sax Tenor", "Sax Barítono"],
     "Metais": ["Trompete", "Trombone", "Flugelhorn", "Euphonium", "Tuba"],
+}
+
+CORES_CATEGORIA = {
+    "Cordas": "#5C7A63",
+    "Madeiras": "#B8860B",
+    "Metais": "#B5551A",
 }
 
 with st.sidebar:
@@ -233,7 +84,7 @@ titulo = st.text_input("Título do programa", value=dados_salvos.get("titulo", "
 aba_culto, aba_ensaio = st.tabs(["Culto de Jovens", "Ensaio"])
 
 with aba_culto:
-    st.header("Cadastro geral")
+    st.header("Músicos e Organistas")
     c1, c2 = st.columns(2)
     mus_rjm = c1.number_input("Músicos RJM", min_value=0, value=dados_salvos.get("mus_rjm", 0))
     org_rjm = c2.number_input("Organistas RJM", min_value=0, value=dados_salvos.get("org_rjm", 0))
@@ -282,11 +133,16 @@ with aba_culto:
     culto_actions = st.empty()
 
 with aba_ensaio:
-    st.header("Ensaio — instrumentistas")
+    st.header("Músicos")
     instrumento_valores = {}
     totais_categoria = {}
     for categoria, lista in INSTRUMENTOS.items():
-        st.markdown(f"**{categoria}**")
+        cor = CORES_CATEGORIA[categoria]
+        st.markdown(
+            f"<div style='background:{cor};color:white;padding:6px 12px;"
+            f"border-radius:4px;font-weight:600;margin:10px 0 6px;'>{categoria}</div>",
+            unsafe_allow_html=True,
+        )
         cols = st.columns(len(lista))
         soma = 0
         for col, nome in zip(cols, lista):
@@ -295,9 +151,12 @@ with aba_ensaio:
             instrumento_valores[nome] = v
             soma += v
         totais_categoria[categoria] = soma
-        st.caption(f"Total {categoria.lower()}: {soma}")
+        st.markdown(
+            f"<span style='color:{cor};font-weight:600;'>Total {categoria.lower()}: {soma}</span>",
+            unsafe_allow_html=True,
+        )
 
-    st.header("Organistas e congregação no ensaio")
+    st.header("Organistas e Irmandade")
     c1, c2, c3 = st.columns(3)
     ens_organistas = c1.number_input("Organistas", min_value=0, value=dados_salvos.get("ens_organistas", 0))
     ens_irmas = c2.number_input("Irmãs", min_value=0, value=dados_salvos.get("ens_irmas", 0))
