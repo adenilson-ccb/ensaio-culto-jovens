@@ -26,11 +26,22 @@ def get_client():
     return client
 
 
-def salvar_ensaio(titulo: str, dados: dict, total_geral: int):
+def salvar_ensaio(titulo: str, dados: dict, total_geral: int) -> int:
+    """Cria um novo registro e retorna o id gerado."""
+    client = get_client()
+    rs = client.execute(
+        "INSERT INTO ensaios (criado_em, titulo, dados, total_geral) VALUES (?, ?, ?, ?) RETURNING id",
+        [datetime.now().isoformat(timespec="seconds"), titulo, json.dumps(dados), total_geral],
+    )
+    return rs.rows[0][0]
+
+
+def atualizar_ensaio(id_: int, titulo: str, dados: dict, total_geral: int):
+    """Atualiza um registro já existente, mantendo a data de criação original."""
     client = get_client()
     client.execute(
-        "INSERT INTO ensaios (criado_em, titulo, dados, total_geral) VALUES (?, ?, ?, ?)",
-        [datetime.now().isoformat(timespec="seconds"), titulo, json.dumps(dados), total_geral],
+        "UPDATE ensaios SET titulo = ?, dados = ?, total_geral = ? WHERE id = ?",
+        [titulo, json.dumps(dados), total_geral, id_],
     )
 
 
