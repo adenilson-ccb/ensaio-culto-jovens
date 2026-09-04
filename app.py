@@ -2,7 +2,7 @@ import json
 
 import streamlit as st
 
-from database import salvar_ensaio, listar_ensaios, excluir_ensaio
+from database import salvar_ensaio, atualizar_ensaio, listar_ensaios, excluir_ensaio
 from pdf import gerar_pdf
 
 st.set_page_config(page_title="Culto de Jovens — Ensaio Local", page_icon="🎵", layout="centered")
@@ -57,6 +57,7 @@ with st.sidebar:
             c1, c2 = st.columns(2)
             if c1.button("Carregar", key=f"load_{id_}", use_container_width=True):
                 st.session_state.form_data = json.loads(dados_json)
+                st.session_state.editando_id = id_
                 st.rerun()
             if c2.button("Excluir", key=f"del_{id_}", use_container_width=True):
                 st.session_state[f"confirmar_exclusao_{id_}"] = True
@@ -76,6 +77,14 @@ with st.sidebar:
         st.rerun()
 
 st.title("🎵 Culto de Jovens — Ensaio Local")
+
+if st.session_state.get("editando_id"):
+    c1, c2 = st.columns([4, 1])
+    c1.info(f"Editando um ensaio salvo (id {st.session_state.editando_id}). Salvar vai atualizar esse mesmo registro.")
+    if c2.button("Novo", use_container_width=True):
+        del st.session_state.editando_id
+        st.session_state.form_data = {}
+        st.rerun()
 
 dados_salvos = st.session_state.get("form_data", {})
 
@@ -229,10 +238,23 @@ dados = {
 pdf_bytes_culto = gerar_pdf(dados, secao="culto")
 pdf_bytes_ensaio = gerar_pdf(dados, secao="ensaio")
 
-with culto_actions.container():
-    if st.button("Salvar Culto de Jovens", type="primary", use_container_width=True, key="salvar_culto"):
-        salvar_ensaio(titulo, dados, total_geral)
+
+def salvar_ou_atualizar():
+    editando_id = st.session_state.get("editando_id")
+    if editando_id:
+        atualizar_ensaio(editando_id, titulo, dados, total_geral)
+        st.success("Atualizado!")
+    else:
+        novo_id = salvar_ensaio(titulo, dados, total_geral)
+        st.session_state.editando_id = novo_id
         st.success("Salvo!")
+
+
+rotulo_botao = "Atualizar" if st.session_state.get("editando_id") else "Salvar"
+
+with culto_actions.container():
+    if st.button(f"{rotulo_botao} Culto de Jovens", type="primary", use_container_width=True, key="salvar_culto"):
+        salvar_ou_atualizar()
         st.rerun()
     st.download_button(
         "Salvar em PDF",
@@ -244,9 +266,8 @@ with culto_actions.container():
     )
 
 with ensaio_actions.container():
-    if st.button("Salvar Ensaio", type="primary", use_container_width=True, key="salvar_ensaio"):
-        salvar_ensaio(titulo, dados, total_geral)
-        st.success("Salvo!")
+    if st.button(f"{rotulo_botao} Ensaio", type="primary", use_container_width=True, key="salvar_ensaio"):
+        salvar_ou_atualizar()
         st.rerun()
     st.download_button(
         "Salvar em PDF",
@@ -254,5 +275,6 @@ with ensaio_actions.container():
         file_name=f"{titulo} - Ensaio.pdf",
         mime="application/pdf",
         use_container_width=True,
+
         key="pdf_ensaio",
     )
