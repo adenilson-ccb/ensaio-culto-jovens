@@ -133,6 +133,17 @@ with aba_culto:
     culto_actions = st.empty()
 
 with aba_ensaio:
+    st.header("Encarregados")
+    st.caption("Quem vai reger e a localidade de cada um.")
+    encarregados_nomes = []
+    encarregados_locais = []
+    for i in (1, 2, 3):
+        c1, c2 = st.columns(2)
+        nome = c1.text_input(f"Nome {i}", value=dados_salvos.get(f"encarregado{i}_nome", ""), key=f"encarregado{i}_nome", placeholder="Nome do encarregado")
+        local = c2.text_input(f"Localidade {i}", value=dados_salvos.get(f"encarregado{i}_local", ""), key=f"encarregado{i}_local", placeholder="Localidade")
+        encarregados_nomes.append(nome)
+        encarregados_locais.append(local)
+
     st.header("Músicos")
     instrumento_valores = {}
     totais_categoria = {}
@@ -197,6 +208,8 @@ with aba_ensaio:
 
 dados = {
     "titulo": titulo,
+    **{f"encarregado{i}_nome": n for i, n in enumerate(encarregados_nomes, start=1)},
+    **{f"encarregado{i}_local": l for i, l in enumerate(encarregados_locais, start=1)},
     "mus_rjm": mus_rjm, "org_rjm": org_rjm, "mus_casados": mus_casados, "org_casadas": org_casadas,
     "irmas1": irmas1, "irmas2": irmas2, "irmas3": irmas3,
     "irmas1_texto": irmas1_texto, "irmas2_texto": irmas2_texto, "irmas3_texto": irmas3_texto,
