@@ -65,6 +65,24 @@ def _tabela_culto(dados, elements, styles):
 
 def _tabela_ensaio(dados, elements, styles):
     elements.append(Paragraph("Ensaio", styles["Heading2"]))
+
+    tem_encarregado = any(dados.get(f"encarregado{i}_nome") for i in (1, 2, 3))
+    if tem_encarregado:
+        elements.append(Paragraph("Encarregados", styles["Heading3"]))
+        tabela_encarregados = [["Nome", "Localidade"]]
+        for i in (1, 2, 3):
+            nome = dados.get(f"encarregado{i}_nome", "")
+            if nome:
+                tabela_encarregados.append([nome, dados.get(f"encarregado{i}_local", "") or "—"])
+        t = Table(tabela_encarregados, colWidths=[6.5 * cm, 6.5 * cm])
+        t.setStyle(TableStyle([
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ]))
+        elements.append(t)
+        elements.append(Spacer(1, 12))
+
     elements.append(Paragraph("Músicos", styles["Heading3"]))
     tabela_instrumentos = [["Categoria", "Cadastrados", "Prévia estimada"]]
     for cat in ["Cordas", "Madeiras", "Metais"]:
