@@ -182,31 +182,33 @@ with aba_ensaio:
     ens_irmas = c2.number_input("Irmãs", min_value=0, value=dados_salvos.get("ens_irmas", 0))
     ens_irmaos = c3.number_input("Irmãos", min_value=0, value=dados_salvos.get("ens_irmaos", 0))
 
-    st.header("Percentual de presença esperada")
-    pct_musicos = st.slider("Músicos", 0, 100, value=dados_salvos.get("pct_musicos", 100))
-    pct_organistas = st.slider("Organistas", 0, 100, value=dados_salvos.get("pct_organistas", 100))
-
-    previa_categoria = {
-        cat: round(totais_categoria[cat] * pct_musicos / 100) for cat in INSTRUMENTOS
-    }
-    previa_musicos = sum(previa_categoria.values())
-    previa_organistas = round(ens_organistas * pct_organistas / 100)
-    total_geral = previa_musicos + previa_organistas + ens_irmas + ens_irmaos
-
-    st.header("Prévia do ensaio")
+    st.header("Composição dos participantes")
+    st.caption("Referência sugerida pela CCB: 50% Cordas, 25% Madeiras, 25% Metais.")
+    total_musicos = sum(totais_categoria.values())
+    METAS_COMPOSICAO = {"Cordas": 50, "Madeiras": 25, "Metais": 25}
     c1, c2, c3 = st.columns(3)
-    c1.metric("Cordas", previa_categoria["Cordas"])
-    c2.metric("Madeiras", previa_categoria["Madeiras"])
-    c3.metric("Metais", previa_categoria["Metais"])
+    for col, cat in zip((c1, c2, c3), ["Cordas", "Madeiras", "Metais"]):
+        pct_atual = round(totais_categoria[cat] / total_musicos * 100) if total_musicos else 0
+        col.metric(cat, f"{pct_atual}%", f"meta: {METAS_COMPOSICAO[cat]}%", delta_color="off")
+    total_geral = total_musicos + ens_organistas + ens_irmas + ens_irmaos
 
-    c1, c2 = st.columns(2)
-    c1.metric("Total de músicos (estimado)", previa_musicos)
-    c2.metric("Total de organistas (estimado)", previa_organistas)
-
-    st.metric("Total geral do ensaio", total_geral)
-    st.caption(
-        f"{previa_musicos} músicos + {previa_organistas} organistas + {ens_irmas} irmãs + {ens_irmaos} irmãos"
+    st.header("Hinos ensaiados")
+    hinos_ensaiados = st.text_area(
+        "Hinos ensaiados",
+        value=dados_salvos.get("hinos_ensaiados", ""),
+        placeholder="Ex: Hino 10 - ...\nHino 25 - ...",
+        label_visibility="collapsed",
     )
+
+    st.header("Resumo geral")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Total de músicos", total_musicos)
+    c2.metric("Organistas", ens_organistas)
+    c3.metric("Total geral", total_geral)
+    st.caption(
+        f"{total_musicos} músicos + {ens_organistas} organistas + {ens_irmas} irmãs + {ens_irmaos} irmãos"
+    )
+
 
     st.divider()
     ensaio_actions = st.empty()
@@ -226,12 +228,10 @@ dados = {
     "irmaos1_texto": irmaos1_texto, "irmaos2_texto": irmaos2_texto, "irmaos3_texto": irmaos3_texto,
     "avulsos_ativo": avulsos_ativo, "qtd_avulsos": int(qtd_avulsos),
     "ens_organistas": ens_organistas, "ens_irmas": ens_irmas, "ens_irmaos": ens_irmaos,
-    "pct_musicos": pct_musicos, "pct_organistas": pct_organistas,
+    "hinos_ensaiados": hinos_ensaiados,
     **{f"i_{nome}": v for nome, v in instrumento_valores.items()},
     "totais_categoria": totais_categoria,
-    "previa": previa_categoria,
-    "previa_musicos": previa_musicos,
-    "previa_organistas": previa_organistas,
+    "total_musicos": total_musicos,
     "total_geral": total_geral,
 }
 
