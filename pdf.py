@@ -110,6 +110,29 @@ def _tabela_ensaio(dados, elements, styles):
     elements.append(t)
     elements.append(Spacer(1, 14))
 
+    elements.append(Paragraph("Composição dos participantes", styles["Heading3"]))
+    metas = {"Cordas": 50, "Madeiras": 25, "Metais": 25}
+    tabela_composicao = [["Categoria", "Cadastrados", "% atual", "Meta CCB"]]
+    for cat in ["Cordas", "Madeiras", "Metais"]:
+        qtd_cat = dados["totais_categoria"].get(cat, 0)
+        pct_atual = round(qtd_cat / total_musicos * 100) if total_musicos else 0
+        tabela_composicao.append([cat, qtd_cat, f"{pct_atual}%", f"{metas[cat]}%"])
+    t = Table(tabela_composicao, colWidths=[4 * cm, 3 * cm, 3 * cm, 3 * cm])
+    t.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 14))
+
+    if dados.get("hinos_ensaiados"):
+        elements.append(Paragraph("Hinos ensaiados", styles["Heading3"]))
+        for linha in dados["hinos_ensaiados"].splitlines():
+            if linha.strip():
+                elements.append(Paragraph(linha.strip(), styles["Normal"]))
+        elements.append(Spacer(1, 14))
+
     elements.append(Paragraph("Resumo geral", styles["Heading3"]))
     total_irmandade = dados.get("ens_irmaos", 0) + dados.get("ens_irmas", 0)
     tabela_resumo = [
