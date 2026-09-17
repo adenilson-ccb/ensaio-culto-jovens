@@ -83,32 +83,50 @@ def _tabela_ensaio(dados, elements, styles):
         elements.append(t)
         elements.append(Spacer(1, 12))
 
-    elements.append(Paragraph("Músicos", styles["Heading3"]))
-    tabela_instrumentos = [["Categoria", "Cadastrados", "Prévia estimada"]]
-    for cat in ["Cordas", "Madeiras", "Metais"]:
-        tabela_instrumentos.append([cat, dados["totais_categoria"][cat], dados["previa"][cat]])
-    t = Table(tabela_instrumentos, colWidths=[4.5 * cm, 4.5 * cm, 4.5 * cm])
+    elements.append(Paragraph("Músicos e Organistas", styles["Heading3"]))
+    instrumentos = sorted(
+        ((chave[2:], valor) for chave, valor in dados.items() if chave.startswith("i_") and valor > 0),
+        key=lambda item: item[0],
+    )
+    total_musicos = sum(valor for _, valor in instrumentos)
+    total_organistas = dados.get("ens_organistas", 0)
+    total_geral_musicos_organistas = total_musicos + total_organistas
+
+    tabela_instrumentos = [["Instrumento", "Quantidade"]]
+    for nome, valor in instrumentos:
+        tabela_instrumentos.append([nome, valor])
+    tabela_instrumentos.append(["Sub Total (músicos)", total_musicos])
+    tabela_instrumentos.append(["Organistas (Órgão)", total_organistas])
+    tabela_instrumentos.append(["TOTAL GERAL", total_geral_musicos_organistas])
+
+    n_linhas = len(tabela_instrumentos)
+    t = Table(tabela_instrumentos, colWidths=[9 * cm, 4 * cm])
     t.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
         ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTNAME", (0, n_linhas - 3), (-1, -1), "Helvetica-Bold"),
     ]))
     elements.append(t)
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 14))
 
-    elements.append(Paragraph("Prévia geral", styles["Heading3"]))
-    tabela_previa = [
-        ["Total de músicos (estimado)", dados["previa_musicos"]],
-        ["Total de organistas (estimado)", dados["previa_organistas"]],
-        ["Irmãs no ensaio", dados["ens_irmas"]],
-        ["Irmãos no ensaio", dados["ens_irmaos"]],
-        ["Total geral do ensaio", dados["total_geral"]],
+    elements.append(Paragraph("Resumo geral", styles["Heading3"]))
+    total_irmandade = dados.get("ens_irmaos", 0) + dados.get("ens_irmas", 0)
+    tabela_resumo = [
+        ["Quant. Músicos", total_musicos],
+        ["Quant. Organistas", total_organistas],
+        ["TOTAL GERAL", total_geral_musicos_organistas],
+        ["Irmãos", dados.get("ens_irmaos", 0)],
+        ["Irmãs", dados.get("ens_irmas", 0)],
+        ["TOTAL irmandade", total_irmandade],
+        ["Total geral", total_geral_musicos_organistas + total_irmandade],
     ]
-    t = Table(tabela_previa, colWidths=[9 * cm, 4 * cm])
+    t = Table(tabela_resumo, colWidths=[9 * cm, 4 * cm])
     t.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+        ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
+        ("FONTNAME", (0, 5), (-1, 6), "Helvetica-Bold"),
     ]))
     elements.append(t)
 
