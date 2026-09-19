@@ -164,6 +164,7 @@ with aba_ensaio:
     st.header("Músicos")
     instrumento_valores = {}
     totais_categoria = {}
+    MAX_COLUNAS_INSTRUMENTOS = 4
     for categoria, lista in INSTRUMENTOS.items():
         cor = CORES_CATEGORIA[categoria]
         st.markdown(
@@ -171,13 +172,15 @@ with aba_ensaio:
             f"border-radius:4px;font-weight:600;margin:10px 0 6px;'>{categoria}</div>",
             unsafe_allow_html=True,
         )
-        cols = st.columns(len(lista))
         soma = 0
-        for col, nome in zip(cols, lista):
-            chave = f"i_{nome}"
-            v = col.number_input(nome, min_value=0, value=dados_salvos.get(chave, 0), key=chave)
-            instrumento_valores[nome] = v
-            soma += v
+        for inicio in range(0, len(lista), MAX_COLUNAS_INSTRUMENTOS):
+            bloco = lista[inicio:inicio + MAX_COLUNAS_INSTRUMENTOS]
+            cols = st.columns(MAX_COLUNAS_INSTRUMENTOS)
+            for col, nome in zip(cols, bloco):
+                chave = f"i_{nome}"
+                v = col.number_input(nome, min_value=0, value=dados_salvos.get(chave, 0), key=chave)
+                instrumento_valores[nome] = v
+                soma += v
         totais_categoria[categoria] = soma
         st.markdown(
             f"<span style='color:{cor};font-weight:600;'>Total {categoria.lower()}: {soma}</span>",
