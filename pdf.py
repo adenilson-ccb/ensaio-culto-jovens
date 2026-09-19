@@ -16,7 +16,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 
 
 CAMPOS_MINISTERIO = [
@@ -144,20 +144,6 @@ def _tabela_ensaio(dados, elements, styles):
                 elements.append(Paragraph(linha.strip(), styles["Normal"]))
         elements.append(Spacer(1, 14))
 
-    elements.append(Paragraph("Ministério", styles["Heading3"]))
-    total_ministerio = sum(dados.get(chave, 0) for _, chave in CAMPOS_MINISTERIO)
-    tabela_ministerio = [[label, dados.get(chave, 0)] for label, chave in CAMPOS_MINISTERIO]
-    tabela_ministerio.append(["Total Ministério", total_ministerio])
-    n_linhas_ministerio = len(tabela_ministerio)
-    t = Table(tabela_ministerio, colWidths=[9 * cm, 4 * cm])
-    t.setStyle(TableStyle([
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("FONTNAME", (0, n_linhas_ministerio - 1), (-1, -1), "Helvetica-Bold"),
-    ]))
-    elements.append(t)
-    elements.append(Spacer(1, 14))
-
     elements.append(Paragraph("Irmandade", styles["Heading3"]))
     total_irmandade = dados.get("ens_irmaos", 0) + dados.get("ens_irmas", 0)
     tabela_irmandade = [
@@ -175,12 +161,11 @@ def _tabela_ensaio(dados, elements, styles):
     elements.append(Spacer(1, 14))
 
     elements.append(Paragraph("Resumo", styles["Heading3"]))
-    total_geral = total_musicos + total_organistas + total_ministerio + total_irmandade
+    total_geral = total_musicos_organistas + total_irmandade
     tabela_resumo = [
         ["Quant. de Músicos", total_musicos],
         ["Quant. Organistas", total_organistas],
         ["Total", total_musicos_organistas],
-        ["Total Ministério", total_ministerio],
         ["Total de Irmandade", total_irmandade],
         ["TOTAL GERAL", total_geral],
     ]
@@ -190,6 +175,25 @@ def _tabela_ensaio(dados, elements, styles):
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
         ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+    ]))
+    elements.append(t)
+
+    elements.append(PageBreak())
+    elements.append(Paragraph("Ministério (apenas para conferência)", styles["Heading3"]))
+    elements.append(Paragraph(
+        "Este quadro não entra no Total Geral — é só para conferência.",
+        styles["Normal"],
+    ))
+    elements.append(Spacer(1, 8))
+    total_ministerio = sum(dados.get(chave, 0) for _, chave in CAMPOS_MINISTERIO)
+    tabela_ministerio = [[label, dados.get(chave, 0)] for label, chave in CAMPOS_MINISTERIO]
+    tabela_ministerio.append(["Total Ministério", total_ministerio])
+    n_linhas_ministerio = len(tabela_ministerio)
+    t = Table(tabela_ministerio, colWidths=[9 * cm, 4 * cm])
+    t.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTNAME", (0, n_linhas_ministerio - 1), (-1, -1), "Helvetica-Bold"),
     ]))
     elements.append(t)
 
