@@ -19,6 +19,17 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 
 
+CAMPOS_MINISTERIO = [
+    ("Anciães", "min_anciaes"),
+    ("Diáconos", "min_diaconos"),
+    ("Coop. do Of. Ministerial", "min_coop_of_ministerial"),
+    ("Coop. de Jovens e Menores", "min_coop_jovens_menores"),
+    ("Enc. Regionais", "min_enc_regionais"),
+    ("Enc. Locais", "min_enc_locais"),
+    ("Examinadoras", "min_examinadoras"),
+]
+
+
 def _tabela_culto(dados, elements, styles):
     elements.append(Paragraph("Culto de Jovens", styles["Heading2"]))
     elements.append(Paragraph("Músicos e Organistas", styles["Heading3"]))
@@ -90,14 +101,14 @@ def _tabela_ensaio(dados, elements, styles):
     )
     total_musicos = sum(valor for _, valor in instrumentos)
     total_organistas = dados.get("ens_organistas", 0)
-    total_geral_musicos_organistas = total_musicos + total_organistas
+    total_musicos_organistas = total_musicos + total_organistas
 
     tabela_instrumentos = [["Instrumento", "Quantidade"]]
     for nome, valor in instrumentos:
         tabela_instrumentos.append([nome, valor])
     tabela_instrumentos.append(["Sub Total (músicos)", total_musicos])
     tabela_instrumentos.append(["Organistas (Órgão)", total_organistas])
-    tabela_instrumentos.append(["TOTAL GERAL", total_geral_musicos_organistas])
+    tabela_instrumentos.append(["Sub Total (músicos + organistas)", total_musicos_organistas])
 
     n_linhas = len(tabela_instrumentos)
     t = Table(tabela_instrumentos, colWidths=[9 * cm, 4 * cm])
@@ -133,23 +144,52 @@ def _tabela_ensaio(dados, elements, styles):
                 elements.append(Paragraph(linha.strip(), styles["Normal"]))
         elements.append(Spacer(1, 14))
 
-    elements.append(Paragraph("Resumo geral", styles["Heading3"]))
+    elements.append(Paragraph("Ministério", styles["Heading3"]))
+    total_ministerio = sum(dados.get(chave, 0) for _, chave in CAMPOS_MINISTERIO)
+    tabela_ministerio = [[label, dados.get(chave, 0)] for label, chave in CAMPOS_MINISTERIO]
+    tabela_ministerio.append(["Total Ministério", total_ministerio])
+    n_linhas_ministerio = len(tabela_ministerio)
+    t = Table(tabela_ministerio, colWidths=[9 * cm, 4 * cm])
+    t.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTNAME", (0, n_linhas_ministerio - 1), (-1, -1), "Helvetica-Bold"),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 14))
+
+    elements.append(Paragraph("Irmandade", styles["Heading3"]))
     total_irmandade = dados.get("ens_irmaos", 0) + dados.get("ens_irmas", 0)
-    tabela_resumo = [
-        ["Quant. Músicos", total_musicos],
-        ["Quant. Organistas", total_organistas],
-        ["TOTAL GERAL", total_geral_musicos_organistas],
+    tabela_irmandade = [
         ["Irmãos", dados.get("ens_irmaos", 0)],
         ["Irmãs", dados.get("ens_irmas", 0)],
-        ["TOTAL irmandade", total_irmandade],
-        ["Total geral", total_geral_musicos_organistas + total_irmandade],
+        ["Total de Irmandade", total_irmandade],
+    ]
+    t = Table(tabela_irmandade, colWidths=[9 * cm, 4 * cm])
+    t.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 14))
+
+    elements.append(Paragraph("Resumo", styles["Heading3"]))
+    total_geral = total_musicos + total_organistas + total_ministerio + total_irmandade
+    tabela_resumo = [
+        ["Quant. de Músicos", total_musicos],
+        ["Quant. Organistas", total_organistas],
+        ["Total", total_musicos_organistas],
+        ["Total Ministério", total_ministerio],
+        ["Total de Irmandade", total_irmandade],
+        ["TOTAL GERAL", total_geral],
     ]
     t = Table(tabela_resumo, colWidths=[9 * cm, 4 * cm])
     t.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("FONTNAME", (0, 2), (-1, 2), "Helvetica-Bold"),
-        ("FONTNAME", (0, 5), (-1, 6), "Helvetica-Bold"),
+        ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
     ]))
     elements.append(t)
 
