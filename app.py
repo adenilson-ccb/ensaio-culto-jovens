@@ -236,8 +236,9 @@ with aba_ensaio:
     c2.metric("Quant. Organistas", ens_organistas)
     c3.metric("Total", total_musicos + ens_organistas)
 
-    total_geral = total_musicos + ens_organistas + total_ministerio + total_irmandade
-    st.markdown("**Total Geral (Músicos + Organistas + Ministério + Irmandade)**")
+    total_geral = total_musicos + ens_organistas + total_irmandade
+    st.markdown("**Total Geral (Músicos + Organistas + Irmandade)**")
+    st.caption("O Ministério não entra nessa soma — fica só para conferência.")
     st.metric("Total Geral", total_geral)
 
     st.divider()
