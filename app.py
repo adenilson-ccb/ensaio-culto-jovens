@@ -38,14 +38,22 @@ if not st.session_state.autenticado:
 
 INSTRUMENTOS = {
     "Cordas": ["Violino", "Viola", "Violoncelo"],
-    "Madeiras": ["Flauta", "Clarinete", "Clarone", "Sax Soprano", "Sax Alto", "Sax Tenor", "Sax Barítono"],
-    "Metais": ["Trompete", "Trombone", "Flugelhorn", "Euphonium", "Tuba"],
+    "Madeiras": [
+        "Flauta", "Clarinete", "Clarone", "Sax Soprano", "Sax Alto", "Sax Tenor", "Sax Barítono",
+        "Oboé", "Oboé D'Amore", "Corne Inglês", "Clarinete Alto",
+    ],
+    "Metais": [
+        "Trompete", "Trombone", "Flugelhorn", "Euphonium", "Tuba",
+        "Trompete Cornet", "Trompa", "Trombonito", "Barítono pisto", "Sax Horn",
+    ],
+    "Harmônico": ["Harmônico (Acordeon)"],
 }
 
 CORES_CATEGORIA = {
     "Cordas": "#5C7A63",
     "Madeiras": "#B8860B",
     "Metais": "#B5551A",
+    "Harmônico": "#6B5B95",
 }
 
 with st.sidebar:
@@ -176,11 +184,31 @@ with aba_ensaio:
             unsafe_allow_html=True,
         )
 
-    st.header("Organistas e Irmandade")
+    st.header("Organistas")
+    ens_organistas = st.number_input("Organistas", min_value=0, value=dados_salvos.get("ens_organistas", 0))
+
+    st.header("Ministério")
+    c1, c2, c3, c4 = st.columns(4)
+    min_anciaes = c1.number_input("Anciães", min_value=0, value=dados_salvos.get("min_anciaes", 0))
+    min_diaconos = c2.number_input("Diáconos", min_value=0, value=dados_salvos.get("min_diaconos", 0))
+    min_coop_of_ministerial = c3.number_input("Coop. do Of. Ministerial", min_value=0, value=dados_salvos.get("min_coop_of_ministerial", 0))
+    min_coop_jovens_menores = c4.number_input("Coop. de Jovens e Menores", min_value=0, value=dados_salvos.get("min_coop_jovens_menores", 0))
     c1, c2, c3 = st.columns(3)
-    ens_organistas = c1.number_input("Organistas", min_value=0, value=dados_salvos.get("ens_organistas", 0))
+    min_enc_regionais = c1.number_input("Enc. Regionais", min_value=0, value=dados_salvos.get("min_enc_regionais", 0))
+    min_enc_locais = c2.number_input("Enc. Locais", min_value=0, value=dados_salvos.get("min_enc_locais", 0))
+    min_examinadoras = c3.number_input("Examinadoras", min_value=0, value=dados_salvos.get("min_examinadoras", 0))
+    total_ministerio = (
+        min_anciaes + min_diaconos + min_coop_of_ministerial + min_coop_jovens_menores
+        + min_enc_regionais + min_enc_locais + min_examinadoras
+    )
+    st.caption(f"**Total Ministério: {total_ministerio}**")
+
+    st.header("Irmandade")
+    c1, c2 = st.columns(2)
+    ens_irmaos = c1.number_input("Irmãos", min_value=0, value=dados_salvos.get("ens_irmaos", 0))
     ens_irmas = c2.number_input("Irmãs", min_value=0, value=dados_salvos.get("ens_irmas", 0))
-    ens_irmaos = c3.number_input("Irmãos", min_value=0, value=dados_salvos.get("ens_irmaos", 0))
+    total_irmandade = ens_irmaos + ens_irmas
+    st.caption(f"**Total de Irmandade: {total_irmandade}**")
 
     st.header("Composição dos participantes")
     st.caption("Referência sugerida pela CCB: 50% Cordas, 25% Madeiras, 25% Metais.")
@@ -190,7 +218,6 @@ with aba_ensaio:
     for col, cat in zip((c1, c2, c3), ["Cordas", "Madeiras", "Metais"]):
         pct_atual = round(totais_categoria[cat] / total_musicos * 100) if total_musicos else 0
         col.metric(cat, f"{pct_atual}%", f"meta: {METAS_COMPOSICAO[cat]}%", delta_color="off")
-    total_geral = total_musicos + ens_organistas + ens_irmas + ens_irmaos
 
     st.header("Hinos ensaiados")
     hinos_ensaiados = st.text_area(
@@ -200,15 +227,15 @@ with aba_ensaio:
         label_visibility="collapsed",
     )
 
-    st.header("Resumo geral")
+    st.header("Resumo")
     c1, c2, c3 = st.columns(3)
-    c1.metric("Total de músicos", total_musicos)
-    c2.metric("Organistas", ens_organistas)
-    c3.metric("Total geral", total_geral)
-    st.caption(
-        f"{total_musicos} músicos + {ens_organistas} organistas + {ens_irmas} irmãs + {ens_irmaos} irmãos"
-    )
+    c1.metric("Quant. de Músicos", total_musicos)
+    c2.metric("Quant. Organistas", ens_organistas)
+    c3.metric("Total", total_musicos + ens_organistas)
 
+    total_geral = total_musicos + ens_organistas + total_ministerio + total_irmandade
+    st.markdown("**Total Geral (Músicos + Organistas + Ministério + Irmandade)**")
+    st.metric("Total Geral", total_geral)
 
     st.divider()
     ensaio_actions = st.empty()
@@ -228,6 +255,11 @@ dados = {
     "irmaos1_texto": irmaos1_texto, "irmaos2_texto": irmaos2_texto, "irmaos3_texto": irmaos3_texto,
     "avulsos_ativo": avulsos_ativo, "qtd_avulsos": int(qtd_avulsos),
     "ens_organistas": ens_organistas, "ens_irmas": ens_irmas, "ens_irmaos": ens_irmaos,
+    "min_anciaes": min_anciaes, "min_diaconos": min_diaconos,
+    "min_coop_of_ministerial": min_coop_of_ministerial, "min_coop_jovens_menores": min_coop_jovens_menores,
+    "min_enc_regionais": min_enc_regionais, "min_enc_locais": min_enc_locais,
+    "min_examinadoras": min_examinadoras, "total_ministerio": total_ministerio,
+    "total_irmandade": total_irmandade,
     "hinos_ensaiados": hinos_ensaiados,
     **{f"i_{nome}": v for nome, v in instrumento_valores.items()},
     "totais_categoria": totais_categoria,
@@ -275,6 +307,5 @@ with ensaio_actions.container():
         file_name=f"{titulo} - Ensaio.pdf",
         mime="application/pdf",
         use_container_width=True,
-
         key="pdf_ensaio",
     )
